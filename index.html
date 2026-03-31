@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ultimate Snake Game+</title>
+  <style>
+    body { text-align:center; font-family:Arial; background:#111; color:white; }
+    canvas { background:black; margin-top:20px; border:2px solid white; }
+    button, input { margin:8px; padding:8px; }
+  </style>
+</head>
+<body>
+
+<h1>Ultimate Snake 🐍+</h1>
+<p id="score">Score: 0 | Level: 1 | High Score: 0</p>
+
+<input id="playerName" placeholder="Enter name" />
+<br>
+<button onclick="startGame()">Start Game</button>
+<button onclick="restartGame()">Restart</button>
+
+<canvas id="game" width="400" height="400"></canvas>
+
+<h2>🏆 Leaderboard</h2>
+<ol id="leaderboard"></ol>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const grid = 20;
+let count = 0;
+let gameRunning = false;
+
+let snake, food, enemy;
+let score, level;
+
+let leaderboard = JSON.parse(localStorage.getItem("snakeLeaderboard") || "[]");
+
+function updateLeaderboard() {
+  const list = document.getElementById("leaderboard");
+  list.innerHTML = "";
+  leaderboard.slice(0,5).forEach(entry => {
+    const li = document.createElement("li");
+    li.textContent = entry.name + " - " + entry.score;
+    list.appendChild(li);
+  });
+}
+
+updateLeaderboard();
+
+function initGame(){
+  snake = {x:160,y:160,dx:20,dy:0,cells:[],maxCells:4};
+  food = {x:rand(),y:rand()};
+  enemy = {x:rand(),y:rand()};
+  score=0;
+  level=1;
+}
+
+function rand(){ return Math.floor(Math.random()*20)*grid; }
+
+function startGame(){ gameRunning=true; initGame(); }
+function restartGame(){ initGame(); }
+
+function moveEnemy(){
+  let dx = snake.x - enemy.x;
+  let dy = snake.y - enemy.y;
+  if(Math.random()<0.5){
+    enemy.x += Math.sign(dx)*grid;
+  } else {
+    enemy.y += Math.sign(dy)*grid;
+  }
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  if(!gameRunning) return;
+
+  if(++count < 6 - Math.min(level,4)) return;
+  count = 0;
+
+  ctx.clearRect(0,0,400,400);
+
+  snake.x += snake.dx;
+  snake.y += snake.dy;
+
+  if(snake.x<0||snake.x>=400||snake.y<0||snake.y>=400) return gameOver();
+
+  snake.cells.unshift({x:snake.x,y:snake.y});
+  if(snake.cells.length>snake.maxCells) snake.cells.pop();
+
+  ctx.fillStyle="red";
+  ctx.fillRect(food.x,food.y,19,19);
+
+  ctx.fillStyle="orange";
+  ctx.fillRect(enemy.x,enemy.y,19,19);
+  moveEnemy();
+
+  ctx.fillStyle="lime";
+  snake.cells.forEach((cell,index)=>{
+    ctx.fillRect(cell.x,cell.y,19,19);
+
+    if(cell.x===food.x&&cell.y===food.y){
+      score++; snake.maxCells++;
+      food={x:rand(),y:rand()};
+      if(score%3===0) level++;
+    }
+
+    if(cell.x===enemy.x&&cell.y===enemy.y) gameOver();
+
+    for(let i=index+1;i<snake.cells.length;i++){
+      if(cell.x===snake.cells[i].x&&cell.y===snake.cells[i].y) gameOver();
+    }
+  });
+
+  document.getElementById("score").innerText =
+    `Score: ${score} | Level: ${level}`;
+}
+
+function gameOver(){
+  gameRunning=false;
+
+  const name = document.getElementById("playerName").value || "Player";
+  leaderboard.push({name, score});
+  leaderboard.sort((a,b)=>b.score-a.score);
+  localStorage.setItem("snakeLeaderboard", JSON.stringify(leaderboard));
+
+  updateLeaderboard();
+}
+
+// keyboard
+document.addEventListener("keydown",e=>{
+  if(e.which===37&&snake.dx===0){snake.dx=-20;snake.dy=0;}
+  else if(e.which===38&&snake.dy===0){snake.dy=-20;snake.dx=0;}
+  else if(e.which===39&&snake.dx===0){snake.dx=20;snake.dy=0;}
+  else if(e.which===40&&snake.dy===0){snake.dy=20;snake.dx=0;}
+});
+
+// mobile swipe
+let startX, startY;
+canvas.addEventListener("touchstart", e=>{
+  startX = e.touches[0].clientX;
+  startY = e.touches[0].clientY;
+});
+canvas.addEventListener("touchend", e=>{
+  let dx = e.changedTouches[0].clientX - startX;
+  let dy = e.changedTouches[0].clientY - startY;
+
+  if(Math.abs(dx) > Math.abs(dy)){
+    if(dx>0 && snake.dx===0){snake.dx=20;snake.dy=0;}
+    else if(dx<0 && snake.dx===0){snake.dx=-20;snake.dy=0;}
+  } else {
+    if(dy>0 && snake.dy===0){snake.dy=20;snake.dx=0;}
+    else if(dy<0 && snake.dy===0){snake.dy=-20;snake.dx=0;}
+  }
+});
+
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
