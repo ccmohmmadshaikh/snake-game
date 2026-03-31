@@ -17,6 +17,10 @@
 <br>
 <button onclick="startGame()">Start Game</button>
 <button onclick="restartGame()">Restart</button>
+<button onclick="togglePause()">Pause / Resume</button>
+  function togglePause() {
+  paused = !paused;
+}
 
 <canvas id="game" width="400" height="400"></canvas>
 
@@ -30,6 +34,7 @@ const ctx = canvas.getContext("2d");
 const grid = 20;
 let count = 0;
 let gameRunning = false;
+let paused = false;
 
 let snake, food, enemy;
 let score, level;
@@ -61,19 +66,31 @@ function rand(){ return Math.floor(Math.random()*20)*grid; }
 function startGame(){ gameRunning=true; initGame(); }
 function restartGame(){ initGame(); }
 
-function moveEnemy(){
+let enemyMoveCooldown = 0;
+function moveEnemy() {
+  enemyMoveCooldown++;
+  if (enemyMoveCooldown < 5 + level) return;
+  enemyMoveCooldown = 0;
   let dx = snake.x - enemy.x;
   let dy = snake.y - enemy.y;
-  if(Math.random()<0.5){
-    enemy.x += Math.sign(dx)*grid;
+  if (Math.random() < 0.6) {
+    if (Math.abs(dx) > Math.abs(dy)) {
+      enemy.x += Math.sign(dx) * grid;
+    } else {
+      enemy.y += Math.sign(dy) * grid;
+    }
   } else {
-    enemy.y += Math.sign(dy)*grid;
+    if (Math.random() < 0.5) {
+      enemy.x += (Math.random() < 0.5 ? grid : -grid);
+    } else {
+      enemy.y += (Math.random() < 0.5 ? grid : -grid);
+    }
   }
 }
 
 function loop(){
   requestAnimationFrame(loop);
-  if(!gameRunning) return;
+  if(!gameRunning || paused) return;
 
   if(++count < 6 - Math.min(level,4)) return;
   count = 0;
@@ -129,6 +146,9 @@ function gameOver(){
 
 // keyboard
 document.addEventListener("keydown",e=>{
+  if (e.code === "Space") {
+  togglePause();
+}
   if(e.which===37&&snake.dx===0){snake.dx=-20;snake.dy=0;}
   else if(e.which===38&&snake.dy===0){snake.dy=-20;snake.dx=0;}
   else if(e.which===39&&snake.dx===0){snake.dx=20;snake.dy=0;}
